@@ -69,6 +69,8 @@ import { createSessionLineage } from "@/pages/session/session-lineage"
 import { SessionPage, SessionRouteErrorBoundary, TargetSessionRouteContent } from "@/pages/session"
 import { NewHome } from "@/pages/home"
 import { LegacyHome } from "@/pages/home/legacy-home"
+// microok: notes feature (docs/DIVERGENCE.md)
+import { NotesCommand, NotesPage } from "@/pages/notes"
 
 const NewSession = lazy(() => import("@/pages/new-session"))
 
@@ -103,6 +105,8 @@ const SessionRoute = () => {
 
   return (
     <SessionRouteErrorBoundary sessionID={params.id}>
+      {/* microok: palette entry into the notes view */}
+      <NotesCommand />
       <SessionPage />
     </SessionRouteErrorBoundary>
   )
@@ -625,6 +629,8 @@ function Routes(props: { serverScoped?: JSX.Element }) {
         <Route path="/:dir" component={DirectoryLayout}>
           <Route path="/" component={() => <Navigate href="session" />} />
           <Route path="/session/:id?" component={SessionRoute} />
+          {/* microok: notes view for the current vault */}
+          <Route path="/notes" component={NotesPage} />
         </Route>
       </Route>
       <Show when={settings.general.newLayoutDesigns()}>
