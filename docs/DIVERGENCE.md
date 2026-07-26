@@ -10,3 +10,6 @@
 | 2026-07-27 | packages/desktop/src/main/index.ts | Phase 2：APP_NAMES/APP_IDS/setName/appId fallback 改 MicroOK，避免与官方 desktop 共享 userData |
 | 2026-07-27 | packages/desktop/src/main/constants.ts | Phase 2：UPDATER_ENABLED 钉死 false，防上游 feed 把应用更新成官方 OpenCode |
 | 2026-07-27 | packages/app/src/app.tsx | Phase 3：接入 notes 路由（/:dir/notes）与命令面板入口，共 3 处小改；实现在新文件 src/pages/notes.tsx |
+| 2026-07-27 | packages/opencode/src/server/routes/instance/httpapi/groups/file.ts | notes 编辑器：新增 POST /file/content 写入端点（加法，含路径逃逸防护） |
+| 2026-07-27 | packages/opencode/src/server/routes/instance/httpapi/handlers/file.ts | 同上：write handler，FSUtil.writeWithDirs |
+| 2026-07-27 | packages/sdk/js/src/v2/gen/sdk.gen.ts | File 类补 write() 方法（生成文件手改；上游重新生成 SDK 时需重放此块） |

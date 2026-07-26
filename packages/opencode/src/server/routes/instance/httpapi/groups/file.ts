@@ -17,6 +17,12 @@ export const FileQuery = Schema.Struct({
   path: Schema.String,
 })
 
+// microok: payload for the file write endpoint (docs/DIVERGENCE.md)
+export const FileWritePayload = Schema.Struct({
+  path: Schema.String,
+  content: Schema.String,
+})
+
 export const FindTextQuery = Schema.Struct({
   ...WorkspaceRoutingQueryFields,
   pattern: Schema.String,
@@ -153,6 +159,18 @@ export const FileApi = HttpApi.make("file")
             identifier: "file.read",
             summary: "Read file",
             description: "Read the content of a specified file.",
+          }),
+        ),
+        // microok: write endpoint for the notes editor (docs/DIVERGENCE.md)
+        HttpApiEndpoint.post("write", FilePaths.content, {
+          query: WorkspaceRoutingQuery,
+          payload: FileWritePayload,
+          success: described(Schema.Struct({ written: Schema.Boolean }), "Write result"),
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "file.write",
+            summary: "Write file",
+            description: "Write text content to a file inside the project directory.",
           }),
         ),
         HttpApiEndpoint.get("status", FilePaths.status, {

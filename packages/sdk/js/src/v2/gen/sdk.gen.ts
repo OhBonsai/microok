@@ -1860,6 +1860,45 @@ export class File extends HeyApiClient {
   }
 
   /**
+   * Write file (microok extension, see docs/DIVERGENCE.md)
+   *
+   * Write text content to a file inside the project directory.
+   */
+  public write<ThrowOnError extends boolean = false>(
+    parameters: {
+      directory?: string
+      workspace?: string
+      path: string
+      content: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "path" },
+            { in: "body", key: "content" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<{ 200: { written: boolean } }, unknown, ThrowOnError>({
+      url: "/file/content",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
    * Read file
    *
    * Read the content of a specified file.
