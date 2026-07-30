@@ -105,8 +105,6 @@ const SessionRoute = () => {
 
   return (
     <SessionRouteErrorBoundary sessionID={params.id}>
-      {/* microok: palette entry into the notes view */}
-      <NotesCommand />
       <SessionPage />
     </SessionRouteErrorBoundary>
   )
@@ -315,6 +313,8 @@ function SharedProviders(props: ParentProps) {
       <BodyDesignClass />
       <CommandProvider>
         <DesktopCommands />
+        {/* microok: global palette entry for the notes view */}
+        <NotesCommand />
         <HighlightsProvider>{props.children}</HighlightsProvider>
       </CommandProvider>
     </>
@@ -629,8 +629,6 @@ function Routes(props: { serverScoped?: JSX.Element }) {
         <Route path="/:dir" component={DirectoryLayout}>
           <Route path="/" component={() => <Navigate href="session" />} />
           <Route path="/session/:id?" component={SessionRoute} />
-          {/* microok: notes view for the current vault */}
-          <Route path="/notes" component={NotesPage} />
         </Route>
       </Route>
       <Show when={settings.general.newLayoutDesigns()}>
@@ -639,7 +637,23 @@ function Routes(props: { serverScoped?: JSX.Element }) {
         <Route path="/server/:serverKey/session/:id" component={TargetSessionRoute} />
       </Show>
       <Route path="/new-session" component={DraftRoute} />
+      {/* microok: chrome-less notes route shared by both layouts */}
+      <Route path="/notes/:dir" component={NotesRoute} />
     </>
+  )
+}
+
+// microok: notes view with the server/directory provider chain but without
+// the legacy chrome, so it renders cleanly inside the new layout shell too.
+function NotesRoute() {
+  return (
+    <SelectedServerProviders>
+      <ServerScopedProviders>
+        <DirectoryLayout>
+          <NotesPage />
+        </DirectoryLayout>
+      </ServerScopedProviders>
+    </SelectedServerProviders>
   )
 }
 

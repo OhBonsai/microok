@@ -1,10 +1,12 @@
 // microok: notes-centric view of the current directory (vault).
 // New file on top of upstream — see docs/DIVERGENCE.md for the wiring points.
-import { useNavigate, useParams } from "@solidjs/router"
+import { useLocation, useNavigate, useParams } from "@solidjs/router"
 import { createResource, createSignal, For, Show } from "solid-js"
 import { Markdown } from "@opencode-ai/session-ui/markdown"
+import { base64Encode } from "@opencode-ai/core/util/encode"
 import { useCommand } from "@/context/command"
 import { useSDK } from "@/context/sdk"
+import { tabKey, useTabs, type Tab } from "@/context/tabs"
 import { NotesGraph } from "./notes-graph"
 import {
   buildGraph,
@@ -16,7 +18,8 @@ import {
   wikilinkFromHref,
 } from "./notes-model"
 
-const NOTE_LIMIT = 500
+// Engine's FindFileQuery caps limit at 200.
+const NOTE_LIMIT = 200
 const READ_CONCURRENCY = 16
 
 function today() {
@@ -40,18 +43,40 @@ async function mapLimit<T, R>(items: readonly T[], limit: number, fn: (item: T) 
   return results
 }
 
-/** Registers the palette entry that jumps from any session view into notes. */
+/**
+ * Registers the palette entry that jumps into the notes view. Mounted globally
+ * (SharedProviders), so it must resolve the current vault directory itself:
+ * route param first, then the session/draft tabs.
+ */
 export function NotesCommand() {
   const command = useCommand()
   const navigate = useNavigate()
-  const params = useParams<{ dir: string }>()
+  const params = useParams<{ dir?: string }>()
+  const location = useLocation()
+  const tabs = useTabs()
+
+  const directorySlug = () => {
+    if (params.dir) return params.dir
+    const path = location.pathname
+    const active = tabs.store.find((tab) => tab.type === "session" && path.includes(`/session/${tab.sessionId}`))
+    const candidates: Tab[] = [...(active ? [active] : []), ...tabs.store]
+    for (const tab of candidates) {
+      const dir = tab.type === "draft" ? tab.directory : tabs.info[tabKey(tab)]?.directory
+      if (dir) return base64Encode(dir)
+    }
+    return undefined
+  }
 
   command.register("notes", () => [
     {
       id: "notes.open",
       title: "Notes: Open vault notes",
       category: "Notes",
-      onSelect: () => navigate(`/${params.dir}/notes`),
+      disabled: !directorySlug(),
+      onSelect: () => {
+        const slug = directorySlug()
+        if (slug) navigate(`/notes/${slug}`)
+      },
     },
   ])
 
@@ -72,7 +97,11 @@ export function NotesPage() {
   const [notes, { refetch: refetchNotes }] = createResource(
     () => sdk().directory,
     async () => {
-      const res = await sdk().client.find.files({ query: ".md", type: "file", limit: NOTE_LIMIT })
+      // Swallow errors: a failed listing should degrade to an empty vault,
+      // not feed the route-level error boundary.
+      const res = await sdk()
+        .client.find.files({ query: ".md", type: "file", limit: NOTE_LIMIT })
+        .catch(() => ({ data: [] as string[] }))
       return filterNotes(res.data ?? [])
     },
   )
@@ -86,7 +115,9 @@ export function NotesPage() {
     () => (view() === "graph" ? (notes() ?? []) : undefined),
     async (paths) => {
       const entries = await mapLimit(paths, READ_CONCURRENCY, async (path) => {
-        const res = await sdk().client.file.read({ path })
+        const res = await sdk()
+          .client.file.read({ path })
+          .catch(() => ({ data: undefined }))
         const file = res.data
         return { path, links: file?.type === "text" ? extractWikilinks(file.content) : [] }
       })
